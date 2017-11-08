@@ -9,7 +9,6 @@ import os
 from collections import Counter
 
 lemm = WordNetLemmatizer()
-hm_lines = 100000000
 
 
 def rand_list(lines, max_value):
