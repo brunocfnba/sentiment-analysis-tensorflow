@@ -3,44 +3,51 @@ import pickle
 import numpy as np
 from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
-from sentiment_neural_net import nn_model
-from sentiment_neural_net import train_neural_network
-lemmatizer = WordNetLemmatizer()
+from sentiment_neural_net import ff_neural_net
+from sentiment_neural_net import training
+lemm = WordNetLemmatizer()
 
 x = tf.placeholder('float')
 
 
 # function responsible to receive a sentence, prepare it (tokenizing, lemmatizing and tranforming into the hot vector
-def use_neural_network(input_data):
-    prediction = nn_model(x)
-    with open('lexicon.pickle', 'rb') as f:
-        lexicon = pickle.load(f)
+def get_sentiment(input_data):
+    tf.reset_default_graph()
+    pl = tf.placeholder('float')
+    nn_output = ff_neural_net(pl)
+    saver = tf.train.Saver()
+    with open('word_dict.pickle', 'rb') as f:
+        word_dict = pickle.load(f)
 
     with tf.Session() as sess:
-        sess.run(tf.global_variables_initializer())
-        saver = tf.train.Saver()
+        # sess.run(tf.global_variables_initializer())
+        # saver = tf.train.Saver()
         saver.restore(sess, "model.ckpt")
-        current_words = word_tokenize(input_data.lower())
-        current_words = [lemmatizer.lemmatize(i) for i in current_words]
-        features = np.zeros(len(lexicon))
+        words = word_tokenize(input_data.lower())
+        lemm_words = [lemm.lemmatize(w) for w in words]
+        hot_vector = np.zeros(len(word_dict))
 
-        for word in current_words:
-            if word.lower() in lexicon:
-                index_value = lexicon.index(word.lower())
-                features[index_value] += 1
+        for word in lemm_words:
+            if word.lower() in word_dict:
+                index_value = word_dict.index(word.lower())
+                hot_vector[index_value] += 1
 
-        features = np.array(list(features))
+        hot_vector = np.array(list(hot_vector))
 
-        result = (sess.run(tf.argmax(prediction.eval(feed_dict={x: [features]}), 1)))
+        result = (sess.run(tf.argmax(nn_output.eval(feed_dict={pl: [hot_vector]}), 1)))
+        # print(result)
         if result[0] == 0:
-            print('Positive:', input_data)
-        elif result[0] == 1:
             print('Negative:', input_data)
+        elif result[0] == 1:
+            print('Positive:', input_data)
+
+
 # Uncomment the row below to train the model
-# train_neural_network(x)
+# training(x)
 
 # call the 'use_neural_network' providing a sentence to check the neural network return
-use_neural_network("I really don't like that thing")
-use_neural_network("This was the best store i've ever seen.")
-use_neural_network("Why do you hate the world")
-use_neural_network("we always need to do good things to help each other")
+get_sentiment('Lebron is a beast... nobody in the NBA comes even close')
+get_sentiment("This was the best store i've ever seen.")
+get_sentiment("Why do you hate the world")
+get_sentiment("we always need to do good things to help each other")
+
